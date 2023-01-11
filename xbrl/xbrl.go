@@ -14,6 +14,7 @@ type XBRL struct {
 	root *etree.Element
 }
 
+// ParseXBRL reads the XBRL file contained in "r" and returns *XBRL.
 func ParseXBRL(r io.Reader) (x *XBRL, err error) {
 	doc := etree.NewDocument()
 	_, err = doc.ReadFrom(r)
@@ -60,6 +61,10 @@ func (x *XBRL) findElement(tag string, contextId string) *etree.Element {
 	return x.root.FindElement(fmt.Sprintf("//%s[@contextRef='%s']", tag, contextId))
 }
 
+// Unpack uses struct tags to find elements in a xbrl file.
+// Any fields on "target" that have an "xbrl" struct tag will be filled with a value of the correct type.
+// If no value is found for a specific element, the value will be left as a zero.
+// An error is returned if a value is not able to be parsed.
 func (x *XBRL) Unpack(target interface{}, cik int, instant string) error {
 	rv := reflect.ValueOf(target)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
