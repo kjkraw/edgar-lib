@@ -10,12 +10,6 @@ import (
 	"time"
 )
 
-// Index represents an index file downloaded from EDGAR.
-type Index struct {
-	file    *os.File
-	Entries []IndexEntry
-}
-
 // IndexEntry represents report found in the index.
 type IndexEntry struct {
 	FormType        string
@@ -60,7 +54,7 @@ type IndexOpts struct {
 // DownloadIndex downloads an index based on opts and writes the file to f.
 // If the "Current" option is true, the index for the current quarter is downloaded.
 // Otherwise, the Year and Quarter options are used.
-func DownloadIndex(opts IndexOpts, client *Client, f *os.File) (idx *Index, err error) {
+func DownloadIndex(opts IndexOpts, client *Client, f *os.File) (err error) {
 	var idxUrl string
 	if opts.Current {
 		idxUrl = "https://www.sec.gov/Archives/edgar/full-index/form.idx"
@@ -89,16 +83,15 @@ func DownloadIndex(opts IndexOpts, client *Client, f *os.File) (idx *Index, err 
 	}
 	_, _ = f.Seek(0, io.SeekStart)
 
-	idx = &Index{file: f}
 	return
 }
 
-// Process reads the index file and generates a list of 10-K and 10-Q entries.
+// ProcessIndex reads the index file and generates a list of 10-K and 10-Q entries.
 // The file is not closed after processing!
 // It is the user's responsibility to close the file after processing is complete!
-func (idx *Index) Process() {
+func ProcessIndex(f *os.File) (entries []IndexEntry) {
 	var counter int
-	scanner := bufio.NewScanner(idx.file)
+	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		if counter < 10 { // Skip the first 10 lines
 			counter += 1
@@ -128,7 +121,8 @@ func (idx *Index) Process() {
 				AccessionNumber: accessionNumber,
 			}
 
-			idx.Entries = append(idx.Entries, entry)
+			entries = append(entries, entry)
 		}
 	}
+	return
 }
