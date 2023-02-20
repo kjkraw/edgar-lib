@@ -25,36 +25,14 @@ func ParseXBRL(r io.Reader) (x *XBRL, err error) {
 	return
 }
 
-// findContext searches the contexts in an XBRL document for a context with the matching cik and date string.
-// "date" is the date of the instant formatted as "yyyy-mm-dd".
-func (x *XBRL) findContext(cik int, instant string) (id string, err error) {
-	contexts := x.root.FindElements("//context")
-	instantPath := etree.MustCompilePath("./period/instant")
-
-	for _, ctx := range contexts {
-		entityElem := ctx.SelectElement("entity")
-		cikElem := entityElem.SelectElement("identifier")
-		if cikElem == nil || cikElem.Text() != fmt.Sprintf("%010d", cik) {
-			continue
-		}
-
-		if entityElem.SelectElement("segment") != nil || entityElem.SelectElement("scenario") != nil {
-			continue
-		}
-
-		instantElem := ctx.FindElementPath(instantPath)
-		if instantElem == nil {
-			continue
-		}
-
-		if instant == instantElem.Text() {
-			id = ctx.SelectAttr("id").Value
-			return
+// findContext uses the cik element to determine the main context in the document
+func (x *XBRL) findContext(cik int) (string, error) {
+	for _, e := range x.root.FindElements(fmt.Sprintf("//dei:EntityCentralIndexKey")) {
+		if e.Text() == fmt.Sprintf("%010d", cik) {
+			return e.SelectAttr("contextRef").Value, nil
 		}
 	}
-
-	err = fmt.Errorf("no context found for cik \"%s\" and instant \"%s\"", cik, instant)
-	return
+	return "", fmt.Errorf("no context found for cik %010d", cik)
 }
 
 func (x *XBRL) findElement(tag string, contextId string) *etree.Element {
@@ -65,7 +43,7 @@ func (x *XBRL) findElement(tag string, contextId string) *etree.Element {
 // Any fields on "target" that have an "xbrl" struct tag will be filled with a value of the correct type.
 // If no value is found for a specific element, the value will be left as a zero.
 // An error is returned if a value is not able to be parsed.
-func (x *XBRL) Unpack(target interface{}, cik int, instant string) error {
+func (x *XBRL) Unpack(target interface{}, cik int) error {
 	rv := reflect.ValueOf(target)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return errors.New("invalid target for unpacking -- must be a pointer")
@@ -73,7 +51,7 @@ func (x *XBRL) Unpack(target interface{}, cik int, instant string) error {
 	rv = rv.Elem()
 	t := rv.Type()
 
-	ctxId, err := x.findContext(cik, instant)
+	ctxId, err := x.findContext(cik)
 	if err != nil {
 		return err
 	}
