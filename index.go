@@ -16,7 +16,7 @@ type IndexEntry struct {
 	CompanyName     string
 	CIK             [10]byte
 	DateFiled       time.Time
-	AccessionNumber [20]byte
+	AccessionNumber string
 }
 
 type EnumQuarter int
@@ -110,15 +110,13 @@ func ProcessIndex(f *os.File) (entries []IndexEntry) {
 			dateFiled, _ := time.Parse("2006-01-02", line[86:96])
 
 			href := strings.TrimSpace(line[98:])
-			var accessionNumber [20]byte
-			copy(accessionNumber[:], href[len(href)-24:len(href)-4])
 
 			entry := IndexEntry{
 				FormType:        formType,
 				CompanyName:     line[12:74],
 				CIK:             cik,
 				DateFiled:       dateFiled,
-				AccessionNumber: accessionNumber,
+				AccessionNumber: href[len(href)-24 : len(href)-4],
 			}
 
 			entries = append(entries, entry)
