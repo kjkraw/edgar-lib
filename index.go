@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -14,7 +15,7 @@ import (
 type IndexEntry struct {
 	FormType        string
 	CompanyName     string
-	CIK             [10]byte
+	CIK             int
 	DateFiled       time.Time
 	AccessionNumber string
 }
@@ -104,10 +105,15 @@ func ProcessIndex(f *os.File) (entries []IndexEntry) {
 		// This filters out reports that are not 10-K or 10-Q.
 		switch formType {
 		case "10-K", "10-Q": // More report types could be added here. I am only interested in 10-K/Qs.
-			var cik [10]byte
-			copy(cik[:], fmt.Sprintf("%010s", strings.TrimSpace(line[74:86])))
+			cik, err := strconv.Atoi(strings.TrimSpace(line[74:86]))
+			if err != nil {
+				panic(err)
+			}
 
-			dateFiled, _ := time.Parse("2006-01-02", line[86:96])
+			dateFiled, err := time.Parse("2006-01-02", line[86:96])
+			if err != nil {
+				panic(err)
+			}
 
 			href := strings.TrimSpace(line[98:])
 
