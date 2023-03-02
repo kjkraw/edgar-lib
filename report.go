@@ -30,11 +30,31 @@ func getInstanceUrl(cik int, accessionNumber string, client *Client) (url string
 		return
 	}
 
-	instance := filingSum.Root().SelectElement("MyReports").SelectElements("Report")[0].SelectAttr("instance").Value
-	if strings.HasSuffix(instance, ".htm") {
-		instance = fmt.Sprintf("%s_htm.xml", strings.TrimSuffix(instance, ".htm"))
+	// Best case, the instance is defined as an attribute on the report elements
+	instance := filingSum.Root().FindElement("//MyReports").SelectElements("Report")[0].SelectAttr("instance")
+	if instance != nil {
+		instVal := instance.Value
+		if strings.HasSuffix(instVal, ".htm") {
+			url = baseUrl + fmt.Sprintf("%s_htm.xml", strings.TrimSuffix(instVal, ".htm"))
+			return
+		}
 	}
-	url = baseUrl + instance
+
+	// Worst case, we use the input files
+	inputs := filingSum.Root().FindElement("//InputFiles").SelectElements("File")
+	for _, f := range inputs {
+		fn := f.Text()
+		if strings.HasSuffix(fn, ".xml") {
+			switch fn[len(fn)-8 : len(fn)-4] {
+			case "_cal", "_def", "_lab", "_pre":
+				continue
+			default:
+				url = baseUrl + fn
+				break
+			}
+		}
+	}
+
 	return
 }
 
