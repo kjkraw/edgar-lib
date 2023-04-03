@@ -27,7 +27,7 @@ type Limiter struct {
 
 func NewLimiter(limit int) (l *Limiter) {
 	l = &Limiter{
-		ticker:    time.NewTicker(time.Minute),
+		ticker:    time.NewTicker(time.Second),
 		cond:      sync.NewCond(&sync.Mutex{}),
 		close:     make(chan bool),
 		limit:     limit,
